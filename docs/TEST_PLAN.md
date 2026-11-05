@@ -35,3 +35,9 @@ Tray host restart, notification placement/dismissal, theme persistence, autostar
 ## Stability
 
 Repeat core operations; check GUI responsiveness, memory/fd growth and log bounds. XFCE evidence does not imply broad desktop compatibility.
+
+## Target capability evidence update (2026-11-06)
+
+- Backlight: normal-user read/write filesystem access checks pass for /dev/backlight/backlight0; current raw value is 9; nlevels=0. The generic FreeBSD backlight source passes UPDATE_STATUS to the device driver and does not establish a universal range. Actual write range and restore behavior remain unverified.
+- Mixer: /dev/mixer0..2 all omit SOUND_MASK_MUTE in DEVMASK. READ_MUTE returned raw zero, but this is not a supported mute state. Mute remains unsupported for the observed devices.
+- No hardware writes were performed. See docs/FREEBSD_DEVICE_CONTROL_RESEARCH.md for exact masks, source inspection, and safety decisions.
