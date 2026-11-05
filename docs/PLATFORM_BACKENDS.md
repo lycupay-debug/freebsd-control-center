@@ -49,3 +49,12 @@ Each report retains successful devices and per-endpoint issues. Permission failu
 ## Verified on the development laptop
 
 Record actual build/test/probe output in the project progress page. A successful read-only query does not prove write capability, write permissions, hotplug handling, or safe restoration.
+
+## Follow-up capability research (2026-11-06)
+
+See FREEBSD_DEVICE_CONTROL_RESEARCH.md for source-level findings and target measurements.
+
+Important target-specific constraints:
+- The Intel backlight node is readable and writable by the current user at the filesystem permission layer, but nlevels=0 leaves the hardware range unspecified. The generic FreeBSD backlight layer does not establish a universal range. FCC remains read-only until the i915 LinuxKPI bridge and accepted value domain are traced.
+- All three target mixer DEVMASK values omit SOUND_MASK_MUTE. Although READ_MUTE returns zero, that raw result is not a valid mute-state indication when the capability bit is absent. FCC must report mute unsupported on these devices.
+- No write ioctl was issued. Filesystem write permission is not proof of successful or safe device control.
