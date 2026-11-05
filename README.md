@@ -2,7 +2,7 @@
 
 Native FreeBSD desktop control center: compact system controls plus a separate notification center.
 
-**Status:** P0 platform validation; this scaffold is not production-ready. Hardware controls, tray/popup behavior, notification delivery, GPU selection, autostart and packaging remain unverified.
+**Status:** P0 platform validation with initial read-only backlight and mixer adapters. Not production-ready. Brightness/audio writes, mute behavior, popup interaction, notifications, GPU selection, autostart and packaging remain unverified.
 
 Baseline: FreeBSD 15.1-RELEASE, XFCE/Xorg, C++20, Qt 6 Widgets, CMake, MIT. Qt Widgets/QPainter Raster is initial baseline. Qt Quick deferred. NVIDIA only after repeatable stability tests; Intel next; CPU Raster fallback. No CUDA/NVDEC dependency or driver reconfiguration.
 
@@ -13,7 +13,8 @@ Build as normal desktop user in active XFCE/Xorg:
     cmake --build build --parallel 2
     ctest --test-dir build --output-on-failure
     ./build/fcc
+    ./build/fcc-platform-probe
 
-Compile success does not prove tray, popup, hardware, GPU or deployment readiness. See docs/PRD.md, ARCHITECTURE.md, API.md, SECURITY.md, BUILD_FREEBSD.md, TEST_PLAN.md and ADR/0001-technology-baseline.md.
+The P0 app reads /dev/backlight and /dev/mixerN asynchronously and displays discovered state; it does not change brightness, volume or mute. See docs/PLATFORM_BACKENDS.md and the other project documents.
 
 Every source file documents responsibility, dependencies, collaboration and side effects. Inspect call paths before coding; test error/permission paths; report only executed checks.

@@ -1,15 +1,15 @@
 # Proposed Service Contracts
 
-Status: design proposal only; no public API frozen.
+Status: initial read-only P0 platform contracts implemented; public control/write API remains unfrozen.
 
 ## Shared result
 Carry success/failure, capability state, optional value, stable error category, safe diagnostic detail, timestamp and device identity. Categories: Unsupported, Unavailable, PermissionDenied, InvalidArgument, Busy, TimedOut, IoError, InternalError. Never fabricate defaults for missing data.
 
-## Brightness
-Enumerate display/backlight endpoints; read value and min/max; set validated value; read back; expose backend and permission status. Discovery differs from writable capability. Revalidate IDs at startup. A write is verified only after readback.
+## Brightness (P0 read-only)
+Enumerate backlight endpoints; read device name/type, current value and raw supported levels. Report min/max only when the driver supplies a level list. A zero level count is valid and means range metadata is unavailable. Write/update operations remain absent until range, permissions and rollback are verified.
 
-## Audio
-Enumerate mixer devices/controls; read selected output volume/mute; set bounded volume/mute; return post-write state. Device selection separate from volume. Do not assume one mixer or uniform control names. Handle removal, busy, unsupported mute and denied permissions.
+## Audio (P0 read-only)
+Enumerate mixer units; identify default unit when its sysctl is readable; read master left/right volume percentages. Mute and volume writes are not implemented. Mute capability and semantics require separate verification.
 
 ## Notifications
 V1.0 supports FCC-originated notifications and selected app status. Do not replace system notification daemon. Treat content as data, not executable markup; delivery errors observable.

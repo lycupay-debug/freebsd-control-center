@@ -22,3 +22,8 @@ Record OS/kernel/arch; Qt/CMake/compiler and package origins; DISPLAY/window man
 
 ## Rollback
 P0 artifacts stay under repository build/. Initial scaffold changes no kernel, driver, sysctl, mixer or global desktop config.
+
+
+## P0 platform probe
+
+Run `./build/fcc-platform-probe` as the desktop user to inspect backlight and mixer discovery. This command is read-only; it never changes brightness, volume or mute.
