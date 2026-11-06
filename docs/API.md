@@ -25,7 +25,7 @@ Freeze interfaces only after P0 evidence. Update callers, tests, docs and migrat
 
 ## Control panel UI contract (P0)
 
-`fcc::gui::ControlPanel` accepts status and per-mixer volume snapshots and emits `refreshRequested`, `volumeApplyRequested(path, value)`, `notificationCenterRequested`, and `quitRequested`. It does not own platform backends or issue system calls. A volume change is submitted only after the user activates Apply; the composition root invokes `AudioBackend::setMasterVolume` asynchronously and reports the result. The UI exposes independent left/right sliders and preserves the selected mixer's stereo balance until the user changes a channel. The popup's `popupPosition` helper clamps placement to a supplied screen available-geometry rectangle.
+`fcc::gui::ControlPanel` accepts status and per-mixer volume snapshots and emits `refreshRequested`, `volumeApplyRequested(path, left, right)`, `notificationCenterRequested`, and `quitRequested`. It does not own platform backends or issue system calls. A volume change is submitted only after the user activates Apply; the composition root invokes `AudioBackend::setMasterVolume` asynchronously and reports the result. The UI exposes independent left/right sliders and preserves the selected mixer's stereo balance until the user changes a channel. The popup's `popupPosition` helper clamps placement to a supplied screen available-geometry rectangle.
 
 
 ### Audio write result
