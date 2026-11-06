@@ -1,21 +1,25 @@
 /**
- * Responsibility: FCC composition root and P0 desktop/platform capability display.
- * Dependencies: Qt Widgets/Concurrent and platform backend interfaces.
- * Collaboration: starts tray/window UI; invokes read-only platform probes asynchronously.
- * Side effects: creates a GUI/tray and performs read-only backlight/mixer queries.
- * Constraint: run as normal desktop user; no device write or privilege escalation.
+ * Responsibility: compose the tray application, transient control panel and probes.
+ * Dependencies: Qt Widgets/Concurrent, FCC GUI surface and FreeBSD platform adapters.
+ * Collaboration: owns service lifetime and routes panel requests to app actions.
+ * Side effects: creates a tray/popup; performs read-only device discovery asynchronously.
+ * Constraint: normal-user process; no hardware writes, shell commands or privilege escalation.
  */
+#include "fcc/gui/control_center/control_panel.h"
 #include "fcc/platform/audio_backend.h"
 #include "fcc/platform/brightness_backend.h"
 #include <QAction>
 #include <QApplication>
+#include <QCursor>
+#include <QDialog>
 #include <QFutureWatcher>
+#include <QGuiApplication>
 #include <QLabel>
 #include <QMenu>
+#include <QScreen>
 #include <QStyle>
 #include <QSystemTrayIcon>
 #include <QVBoxLayout>
-#include <QWidget>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QStringList>
 
@@ -63,46 +67,68 @@ QString probePlatform() {
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    QApplication::setApplicationName("FreeBSD Control Center");
-    QApplication::setApplicationVersion("0.1.0");
-    QApplication::setOrganizationName("FCC");
-    QWidget window;
-    window.setWindowTitle("FreeBSD Control Center - P0");
-    window.resize(520, 300);
-    auto *layout = new QVBoxLayout(&window);
-    auto *title = new QLabel("FreeBSD Control Center", &window);
-    auto *status = new QLabel("Qt Widgets initialized.\nReading hardware state (read-only)…", &window);
-    title->setStyleSheet("font-size: 20px; font-weight: 600;");
-    status->setWordWrap(true);
-    layout->addWidget(title);
-    layout->addWidget(status);
+    QApplication::setApplicationName(QStringLiteral("FreeBSD Control Center"));
+    QApplication::setApplicationVersion(QStringLiteral("0.1.0"));
+    QApplication::setOrganizationName(QStringLiteral("FCC"));
+    app.setQuitOnLastWindowClosed(false);
 
+    fcc::gui::ControlPanel panel;
     QFutureWatcher<QString> probeWatcher;
-    QObject::connect(&probeWatcher, &QFutureWatcher<QString>::finished, &window,
-        [&probeWatcher, status]() { status->setText(probeWatcher.result()); });
-    probeWatcher.setFuture(QtConcurrent::run(&probePlatform));
+    const auto refresh = [&panel, &probeWatcher]() {
+        if (probeWatcher.isRunning()) return;
+        panel.setStatusText(QStringLiteral("Reading hardware state (read-only)…"));
+        probeWatcher.setFuture(QtConcurrent::run(&probePlatform));
+    };
+    QObject::connect(&probeWatcher, &QFutureWatcher<QString>::finished, &panel,
+        [&panel, &probeWatcher]() { panel.setStatusText(probeWatcher.result()); });
+    QObject::connect(&panel, &fcc::gui::ControlPanel::refreshRequested, &panel, refresh);
 
-    const bool trayAvailable = QSystemTrayIcon::isSystemTrayAvailable();
+    QDialog notificationCenter;
+    notificationCenter.setWindowTitle(QStringLiteral("Notification Center"));
+    notificationCenter.resize(360, 220);
+    auto *notificationLayout = new QVBoxLayout(&notificationCenter);
+    auto *notificationText = new QLabel(QStringLiteral("No notifications yet."), &notificationCenter);
+    notificationText->setWordWrap(true);
+    notificationLayout->addWidget(notificationText);
+    QObject::connect(&panel, &fcc::gui::ControlPanel::notificationCenterRequested,
+                     &notificationCenter, [&notificationCenter]() {
+        notificationCenter.show(); notificationCenter.raise(); notificationCenter.activateWindow();
+    });
+    QObject::connect(&panel, &fcc::gui::ControlPanel::quitRequested, &app, &QApplication::quit);
+
     QSystemTrayIcon tray;
-    if (trayAvailable) {
-        tray.setIcon(app.style()->standardIcon(QStyle::SP_ComputerIcon));
-        tray.setToolTip("FreeBSD Control Center");
-        auto *menu = new QMenu(&window);
-        auto *showAction = menu->addAction("Show FCC");
-        auto *quitAction = menu->addAction("Quit");
-        QObject::connect(showAction, &QAction::triggered, &window, [&window]() {
-            window.show(); window.raise(); window.activateWindow();
+    tray.setIcon(app.style()->standardIcon(QStyle::SP_ComputerIcon));
+    tray.setToolTip(QStringLiteral("FreeBSD Control Center"));
+    QMenu trayMenu;
+    QAction *showAction = trayMenu.addAction(QStringLiteral("Open Control Center"));
+    QAction *notificationsAction = trayMenu.addAction(QStringLiteral("Notification Center"));
+    trayMenu.addSeparator();
+    QAction *quitAction = trayMenu.addAction(QStringLiteral("Quit"));
+    tray.setContextMenu(&trayMenu);
+
+    const auto openPanel = [&tray, &panel]() {
+        const QRect trayGeometry = tray.geometry();
+        const QPoint anchor = trayGeometry.isValid() && !trayGeometry.isEmpty()
+            ? trayGeometry.center() : QCursor::pos();
+        QScreen *screen = QGuiApplication::screenAt(anchor);
+        if (!screen) screen = QGuiApplication::primaryScreen();
+        if (screen) panel.openAt(anchor, screen->availableGeometry());
+        else panel.show();
+    };
+    QObject::connect(showAction, &QAction::triggered, &panel, openPanel);
+    QObject::connect(notificationsAction, &QAction::triggered, &notificationCenter,
+        [&notificationCenter]() { notificationCenter.show(); notificationCenter.raise(); });
+    QObject::connect(quitAction, &QAction::triggered, &app, &QApplication::quit);
+    QObject::connect(&tray, &QSystemTrayIcon::activated, &panel,
+        [&openPanel](QSystemTrayIcon::ActivationReason reason) {
+            if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick)
+                openPanel();
         });
-        QObject::connect(quitAction, &QAction::triggered, &app, &QApplication::quit);
-        tray.setContextMenu(menu);
-        QObject::connect(&tray, &QSystemTrayIcon::activated, &window,
-            [&window](QSystemTrayIcon::ActivationReason reason) {
-                if (reason == QSystemTrayIcon::Trigger) {
-                    window.show(); window.raise(); window.activateWindow();
-                }
-            });
-        tray.show();
-    }
-    window.show();
+
+    tray.show();
+    refresh();
+    if (QSystemTrayIcon::isSystemTrayAvailable()) openPanel();
+    else if (auto *screen = QGuiApplication::primaryScreen())
+        panel.openAt(screen->availableGeometry().center(), screen->availableGeometry());
     return app.exec();
 }
