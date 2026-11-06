@@ -31,6 +31,9 @@ bool defaultUnit(int unit) {
     return sysctlbyname("hw.snd.default_unit", &selected, &size, nullptr, 0) == 0 && selected == unit;
 }
 }
+bool supportsOssMute(int deviceMask) noexcept {
+    return (deviceMask & SOUND_MASK_MUTE) != 0;
+}
 std::optional<StereoVolume> decodeOssVolume(int raw) noexcept {
     const int left = raw & 0xff, right = (raw >> 8) & 0xff;
     if (left > 100 || right > 100) return std::nullopt;
@@ -70,7 +73,10 @@ ProbeReport<AudioDevice> AudioBackend::discover() const {
             report.issues.push_back({ProbeError::Unsupported, path, "mixer returned a volume outside 0..100"});
             continue;
         }
-        report.devices.push_back({path, pcmDescription(unit), defaultUnit(unit), *volume});
+        report.devices.push_back({
+            path, pcmDescription(unit), defaultUnit(unit), *volume,
+            supportsOssMute(deviceMask)
+        });
     }
     if (found == 0 && report.issues.empty())
         report.issues.push_back({ProbeError::Unavailable, "/dev/mixer*", "no mixer devices were found"});
