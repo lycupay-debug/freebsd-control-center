@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=FreeBSD Control Center
+Comment=Desktop controls and notification center
+Exec=fcc
+TryExec=fcc
+Icon=preferences-system
+Terminal=false
+StartupNotify=false
+Categories=System;Settings;
