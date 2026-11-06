@@ -15,6 +15,12 @@ Build as normal desktop user in active XFCE/Xorg:
     ./build/fcc
     ./build/fcc-platform-probe
 
+Install for the current user (no root privileges and no autostart):
+    cmake --install build --prefix "$HOME/.local"
+    "$HOME/.local/bin/fcc"
+
+See `docs/INSTALL_FREEBSD.md` for verification and safe uninstall instructions.
+
 The P0 app reads /dev/backlight and /dev/mixerN asynchronously and displays discovered state. The tray opens a transient popup; the popup has refresh, notification-center and quit actions. Device operations remain read-only. See docs/PLATFORM_BACKENDS.md, docs/TEST_PLAN.md and docs/SECURITY.md.
 
 Every source file documents responsibility, dependencies, collaboration and side effects. Inspect call paths before coding; test error/permission paths; report only executed checks.
