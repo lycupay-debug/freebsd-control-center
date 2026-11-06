@@ -2,8 +2,8 @@
  * Responsibility: enumerate FreeBSD mixer devices and read master volume via OSS ioctls.
  * Dependencies: sys/soundcard.h, sysctlbyname, POSIX read-only file APIs.
  * Collaboration: implements AudioBackend; device selection and UI stay above this layer.
- * Side effects: opens /dev/mixerN with O_RDONLY and issues DEVMASK/VOLUME read ioctls only.
- * Constraints: no volume/mute write operation is exposed in this P0 adapter.
+ * Side effects: discovery opens O_RDONLY; explicit master-volume changes open one validated /dev/mixerN O_RDWR and verify readback, attempting restoration on failure.
+ * Constraints: master-volume writes are explicit and readback-verified; mute writes are not exposed.
  */
 #include "fcc/platform/audio_backend.h"
 #include <sys/types.h>
