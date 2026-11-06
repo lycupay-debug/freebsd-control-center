@@ -12,7 +12,7 @@ Record host, OS, package versions, command, exit code, output, date and limits. 
 | P0-05 | Brightness discovery | verified read-only: `/dev/backlight/backlight0`, `intel_backlight`, raw value observed as 9 in an earlier probe and 36 in a later probe; driver reports nlevels=0, so min/max unavailable |
 | P0-06 | Brightness write | intentionally locked: nlevels=0 and loaded i915/LinuxKPI binary/source correspondence plus accepted range are not established; no write ioctl issued |
 | P0-07 | Mixer discovery | verified read-only: mixer0/1/2 and master volume values 60:60, 86:86, 100:100 |
-| P0-08 | Audio write/mute | backend setter verified on non-default mixer2: 100:100 -> 99:99 -> 100:100, both readbacks exact; default mixer0 remained 60:60; UI explicit-Apply request and per-device volume selection are automated-tested; mute remains unsupported |
+| P0-08 | Audio write/mute | backend setter verified on non-default mixer2: 100:100 -> 99:99 -> 100:100, both readbacks exact; default mixer0 remained 60:60; UI explicit-Apply request, independent stereo values, per-device volume selection and mixer switching are automated-tested; mute remains unsupported |
 | P0-09 | Theme | not implemented |
 | P0-10 | Rendering | earlier Intel GLX acceleration evidence exists; FCC-specific renderer selection remains unverified |
 | P0-11 | Failure | partial: invalid/absent endpoint paths retain explicit issues; permission-denied behavior not yet simulated |
