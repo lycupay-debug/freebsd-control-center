@@ -23,6 +23,12 @@ private slots:
         QVERIFY(!fcc::platform::decodeOssVolume(101 | (40 << 8)).has_value());
         QVERIFY(!fcc::platform::decodeOssVolume(40 | (255 << 8)).has_value());
     }
+    void muteRequiresAdvertisedCapability() {
+        // A successful READ_MUTE ioctl must not override a missing capability bit.
+        QVERIFY(!fcc::platform::supportsOssMute(0));
+        QVERIFY(!fcc::platform::supportsOssMute(0x01002831));
+        QVERIFY(fcc::platform::supportsOssMute(0x01002831 | (1 << 28)));
+    }
 };
 QTEST_GUILESS_MAIN(PlatformValueTests)
 #include "test_platform_values.moc"
