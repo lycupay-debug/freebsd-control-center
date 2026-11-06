@@ -9,7 +9,7 @@ Carry success/failure, capability state, optional value, stable error category, 
 Enumerate backlight endpoints; read device name/type, current value and raw supported levels. Report min/max only when the driver supplies a level list. A zero level count is valid and means range metadata is unavailable. Write/update operations remain absent until range, permissions and rollback are verified.
 
 ## Audio (P0 read-only)
-Enumerate mixer units; identify default unit when its sysctl is readable; read master left/right volume percentages. Mute and volume writes are not implemented. Mute capability and semantics require separate verification.
+Enumerate mixer units; identify default unit when its sysctl is readable; read master left/right volume percentages. The guarded `setMasterVolume` operation accepts only canonical `/dev/mixerN` paths (N=0..31), validates each channel in 0..100, requires the master-volume capability bit, saves the original value, writes and verifies readback, and attempts restoration if verification fails. The current UI does not expose this operation. Mute remains unsupported unless the device advertises `SOUND_MASK_MUTE`.
 
 ## Notifications
 V1.0 supports FCC-originated notifications and selected app status. Do not replace system notification daemon. Treat content as data, not executable markup; delivery errors observable.
@@ -26,3 +26,8 @@ Freeze interfaces only after P0 evidence. Update callers, tests, docs and migrat
 ## Control panel UI contract (P0)
 
 `fcc::gui::ControlPanel` accepts status text and emits `refreshRequested`, `notificationCenterRequested`, and `quitRequested`. It does not own platform backends or issue system calls. The application composition root owns refresh scheduling and window lifecycle. The popup's `popupPosition` helper clamps placement to a supplied screen available-geometry rectangle.
+
+
+### Audio write result
+
+`VolumeWriteResult` reports success, optional observed volume, whether the original value was restored after a failed verification, and a diagnostic detail string. A successful return requires readback to match both requested channels. A failure does not imply that the hardware remained unchanged; callers must inspect the restoration status and surface the diagnostic.
