@@ -8,7 +8,7 @@ Record host, OS, package versions, command, exit code, output, date and limits. 
 | P0-01 | CMake configure/build | verified: FreeBSD 15.1-RELEASE, Qt 6.11.2, CMake 3.31.12; clean build |
 | P0-02 | GUI launch | verified: normal-user launch in XFCE/Xorg; main and tray windows in X11 tree |
 | P0-03 | Tray | user manually confirmed tray click opens/restores FCC; menu/host-restart behavior not yet tested |
-| P0-04 | Popup | not implemented/verified: focus, outside click, Escape and edge placement |
+| P0-04 | Popup | implemented: Qt::Popup, Escape dismissal and available-geometry clamping; Escape and placement automated tests pass; X11 outside-click/focus behavior still requires desktop acceptance |
 | P0-05 | Brightness discovery | verified read-only: `/dev/backlight/backlight0`, `intel_backlight`, current 9; driver reports nlevels=0, so min/max unavailable |
 | P0-06 | Brightness write | not implemented or tested; no write ioctl in P0 adapter |
 | P0-07 | Mixer discovery | verified read-only: mixer0/1/2 and master volume values 60:60, 86:86, 100:100 |
@@ -20,11 +20,15 @@ Record host, OS, package versions, command, exit code, output, date and limits. 
 
 ## Automated tests
 
-- `fcc_platform_values`: pure OSS stereo-volume decoding; zero, 100 and out-of-range channels.
+- `fcc_platform_values`: pure OSS stereo-volume decoding; zero, 100 and out-of-range channels; mute capability-bit interpretation.
+- `fcc_control_panel`: popup geometry clamping (including a non-zero monitor origin) and Escape dismissal.
+- Popup outside-click behavior is delegated to Qt's native popup/window-system behavior. The offscreen QPA plugin does not model outside-click routing; this check must run under the target X11 window manager.
 - Tests do not mutate host hardware.
 - `fcc-platform-probe` exercises actual read-only hardware discovery on the development laptop.
 
 ## P1
+
+- Verify X11 outside-click dismissal, tray menu actions, notification-center launch and popup focus behavior in a live XFCE session.
 
 Bounds, min/max, rounding, hotplug, denied permissions, absent endpoints, mixer switching, busy devices, unsupported mute, write failures, stale async completions, cancellation/timeouts/shutdown, real integration with safe restoration.
 
