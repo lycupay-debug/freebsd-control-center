@@ -1,6 +1,6 @@
 # FreeBSD Platform Backends (P0)
 
-Status: initial read-only implementation; no device write contract is exposed.
+Status: read-only brightness discovery plus guarded master-volume write/readback/restore; no brightness write contract is exposed.
 
 ## Responsibilities and dependency direction
 
@@ -33,7 +33,7 @@ No `BACKLIGHTUPDATESTATUS` call exists in this P0 adapter. The app does not alte
 5. Reject channel values outside 0..100.
 6. Read the descriptive label from `dev.pcm.N.%desc` and compare the unit with `hw.snd.default_unit`.
 
-The discovery adapter reports master volume and whether mute is advertised. The backend also exposes a guarded master-volume setter: canonical mixer path validation, 0..100 validation, DEVMASK check, O_RDWR open, original-value capture, WRITE_VOLUME, exact readback verification, and best-effort original-value restoration if verification fails. The P0 UI still does not expose this setter. Mute remains unavailable when SOUND_MASK_MUTE is absent.
+The discovery adapter reports master volume and whether mute is advertised. The backend also exposes a guarded master-volume setter: canonical mixer path validation, 0..100 validation, DEVMASK check, O_RDWR open, original-value capture, WRITE_VOLUME, exact readback verification, and best-effort original-value restoration if verification fails. The popup exposes this setter only through an explicit Apply action, with independent left/right sliders; moving sliders alone never writes hardware. Mute remains unavailable when SOUND_MASK_MUTE is absent.
 
 ## Error model
 
@@ -41,8 +41,8 @@ Each report retains successful devices and per-endpoint issues. Permission failu
 
 ## Security and threading
 
-- No root helper, shell command execution, sysctl writes, mixer writes or backlight writes.
-- Device nodes are opened read-only.
+- No root helper, shell command execution, sysctl writes or backlight writes.
+- Discovery opens device nodes read-only. Explicit Apply opens only the selected validated mixer endpoint O_RDWR.
 - QtConcurrent keeps discovery away from the GUI thread.
 - The current probe is bounded to one backlight directory and 32 mixer units.
 
@@ -70,6 +70,8 @@ The audio adapter preserves whether SOUND_MASK_MUTE is present in each mixer's S
 - `ControlPanel` is a Qt `QFrame` with `Qt::Popup | Qt::FramelessWindowHint`; it has no dependency on platform device APIs.
 - Tray activation opens the panel. Its position is clamped to the active screen's available geometry and flips above the anchor when the anchor is in the lower half of the screen. If the tray does not expose geometry, the current pointer position is used.
 - Escape dismissal and pure geometry calculations are covered by the Qt test target. Outside-click dismissal is provided by Qt's popup behavior but must be checked under the live XFCE/X11 window manager; the offscreen test plugin cannot emulate this routing.
+- The audio section enumerates mixer devices, selects the default device when available, and shows the selected device's own readback values. Independent left/right 0..100 sliders plus explicit Apply preserve stereo balance; changing either slider alone never writes hardware.
+- Apply and refresh controls are disabled while a platform operation is in flight. The composition root rejects overlapping probe and volume-write operations.
 - The notification-center window is currently a shell with an empty-state message, not a complete notification service.
 - Refresh is asynchronous and refuses to start a second probe while the first is running.
 
