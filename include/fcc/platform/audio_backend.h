@@ -10,7 +10,14 @@
 #include <string>
 namespace fcc::platform {
 struct StereoVolume { int left{0}; int right{0}; };
-struct AudioDevice { std::string path, name; bool isDefault{false}; StereoVolume masterVolume; };
+struct AudioDevice {
+    std::string path, name;
+    bool isDefault{false};
+    StereoVolume masterVolume;
+    bool muteSupported{false};
+};
+// Interpret optional OSS controls only when the device advertises their capability bit.
+[[nodiscard]] bool supportsOssMute(int deviceMask) noexcept;
 [[nodiscard]] std::optional<StereoVolume> decodeOssVolume(int raw) noexcept;
 class AudioBackend { public: [[nodiscard]] ProbeReport<AudioDevice> discover() const; };
 } // namespace fcc::platform
