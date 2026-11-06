@@ -41,3 +41,10 @@ Repeat core operations; check GUI responsiveness, memory/fd growth and log bound
 - Backlight: normal-user read/write filesystem access checks pass for /dev/backlight/backlight0; current raw value is 9; nlevels=0. The generic FreeBSD backlight source passes UPDATE_STATUS to the device driver and does not establish a universal range. Actual write range and restore behavior remain unverified.
 - Mixer: /dev/mixer0..2 all omit SOUND_MASK_MUTE in DEVMASK. READ_MUTE returned raw zero, but this is not a supported mute state. Mute remains unsupported for the observed devices.
 - No hardware writes were performed. See docs/FREEBSD_DEVICE_CONTROL_RESEARCH.md for exact masks, source inspection, and safety decisions.
+
+
+## Capability-bit regression test (2026-11-06)
+
+- Added a pure unit test proving that mute is reported only when SOUND_MASK_MUTE is present in the advertised OSS device mask.
+- The test includes the observed target mask 0x01002831, which must remain unsupported for mute.
+- This tests capability interpretation only; it does not test or issue hardware mute writes.
