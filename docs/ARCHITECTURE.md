@@ -1,6 +1,6 @@
 # Architecture
 
-Status: P0 read-only FreeBSD platform adapters implemented; service/API boundaries remain provisional.
+Status: P0 read-only FreeBSD platform adapters and an initial tray/popup UI implemented; service/API boundaries remain provisional.
 
 ## Principles
 Separate presentation, application coordination, services, desktop integration and OS adapters. UI never accesses sysctl/device/mixer directly. Core does not depend on Qt Widgets. Hardware services do not depend on desktop environment. Blocking I/O stays off GUI thread. Missing devices are non-fatal. No silent fallback or false success. Avoid speculative abstractions.
@@ -15,7 +15,8 @@ Separate presentation, application coordination, services, desktop integration a
 | FreeBSD Platform | sysctl, ioctl, mixer, backlight, ACPI | UI state/layout |
 
 ## Implemented source map
-- `src/app/main.cpp`: composition root, tray/window, asynchronous read-only probe results.
+- `src/app/main.cpp`: composition root, tray lifecycle, asynchronous probe orchestration and notification-center shell.
+- `include/fcc/gui/control_center/control_panel.h`, `src/gui/control_center/control_panel.cpp`: transient Qt popup, screen-bounded positioning and request signals; no platform access.
 - `include/fcc/platform/probe_result.h`: shared probe records and diagnostics.
 - `include/fcc/platform/brightness_backend.h`, `src/platform/freebsd/brightness_backend.cpp`: read-only backlight discovery.
 - `include/fcc/platform/audio_backend.h`, `src/platform/freebsd/audio_backend.cpp`: read-only mixer/master-volume discovery.
@@ -26,7 +27,7 @@ Separate presentation, application coordination, services, desktop integration a
 Presentation -> application/service contracts <- FreeBSD implementations. The P0 composition root temporarily invokes the probe interfaces directly; device calls remain outside widgets. Platform code never depends on Qt.
 
 ## Data flow
-P0 composition root -> backend -> O_RDONLY device open + read ioctls -> result/diagnostics -> UI status label. No brightness, volume or mute write path exists.
+P0 composition root -> backend -> O_RDONLY device open + read ioctls -> result/diagnostics -> popup status label. Tray activation opens the popup; Qt::Popup supplies Escape and outside-click dismissal semantics. No brightness, volume or mute write path exists.
 
 ## Threading/lifecycle
 GUI objects stay on GUI thread. Initial discovery uses QtConcurrent. No thread-per-event. Requests time out; stale completions cannot overwrite a newly selected device. Shutdown stops new work, cancels/waits bounded in-flight operations, then releases adapters.
