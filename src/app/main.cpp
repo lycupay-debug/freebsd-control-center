@@ -47,6 +47,9 @@ QString probePlatform() {
                 .arg(QString::fromStdString(device.name))
                 .arg(device.isDefault ? QStringLiteral(" [default]") : QString())
                 .arg(device.masterVolume.left).arg(device.masterVolume.right);
+            lines << QStringLiteral("Audio mute: %1")
+                .arg(device.muteSupported ? QStringLiteral("advertised by device")
+                                          : QStringLiteral("unsupported by device"));
         }
     } else {
         lines << QStringLiteral("Audio: unavailable");
