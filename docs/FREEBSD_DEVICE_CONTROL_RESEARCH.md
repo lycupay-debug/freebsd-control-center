@@ -109,3 +109,10 @@ After the read-only research above, FCC added a guarded master-volume write oper
 A separate temporary test program exercised the non-default `/dev/mixer2` endpoint only after confirming its original value was 100:100. It changed the value to 99:99 and read back 99:99, then restored 100:100 and read back 100:100. A final independent probe confirmed mixer2 remained 100:100 and default mixer0 remained 60:60. The temporary test source and executable were removed.
 
 This is a target-specific successful write/readback/restore result. It does not validate other mixers, injected write/readback failures, mute, or GUI integration. No brightness write was issued.
+
+
+## 8. Explicit-Apply UI integration (2026-11-06)
+
+The Qt popup now lists discovered mixers, selects the default mixer when available, and displays that selected device's own left/right readback values. Independent 0..100 sliders are previews until the user presses Apply; Apply requests a write of both selected channel values. The composition root performs the backend operation asynchronously and disables refresh/volume controls while operations are active. A returned observed value is reconciled to the selected mixer; when no valid readback is available, the UI restores the last confirmed channel values and retains the backend diagnostic.
+
+Qt tests cover explicit Apply signal routing, selected mixer path/value, per-device readback selection and no-device disabled state. Live XFCE interaction, user-visible write failure presentation, and behavior across other mixers remain to be accepted. No mute or brightness control was added.
