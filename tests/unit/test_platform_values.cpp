@@ -19,9 +19,23 @@ private slots:
         const auto maximum = fcc::platform::decodeOssVolume(100 | (100 << 8));
         QVERIFY(maximum.has_value()); QCOMPARE(maximum->left, 100); QCOMPARE(maximum->right, 100);
     }
+    void encodesValidStereoVolume() {
+        const auto encoded = fcc::platform::encodeOssVolume({60, 86});
+        QVERIFY(encoded.has_value()); QCOMPARE(*encoded, 60 | (86 << 8));
+        QVERIFY(fcc::platform::isValidOssVolume({0, 100}));
+        QVERIFY(!fcc::platform::isValidOssVolume({-1, 50}));
+        QVERIFY(!fcc::platform::isValidOssVolume({50, 101}));
+        QVERIFY(!fcc::platform::encodeOssVolume({101, 0}).has_value());
+    }
     void rejectsOutOfRangeChannels() {
         QVERIFY(!fcc::platform::decodeOssVolume(101 | (40 << 8)).has_value());
         QVERIFY(!fcc::platform::decodeOssVolume(40 | (255 << 8)).has_value());
+    }
+    void refusesUnsafeMixerWriteRequests() {
+        const fcc::platform::AudioBackend backend;
+        QVERIFY(!backend.setMasterVolume("/dev/mixer32", {50, 50}).success);
+        QVERIFY(!backend.setMasterVolume("/dev/mixer0/../mixer1", {50, 50}).success);
+        QVERIFY(!backend.setMasterVolume("/dev/mixer0", {101, 50}).success);
     }
     void muteRequiresAdvertisedCapability() {
         // A successful READ_MUTE ioctl must not override a missing capability bit.
