@@ -2,7 +2,7 @@
  * Responsibility: read-only contract for FreeBSD OSS-compatible mixer discovery.
  * Dependencies: shared probe result types; no Qt or desktop dependencies.
  * Collaboration: audio service consumes stable mixer path and master-volume state.
- * Side effects: opens mixer devices read-only and issues read ioctls only.
+ * Side effects: discovery is read-only; setMasterVolume performs an explicit, range-checked OSS write with readback and restoration attempt.
  */
 #pragma once
 #include "fcc/platform/probe_result.h"
