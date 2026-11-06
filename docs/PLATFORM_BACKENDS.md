@@ -58,3 +58,8 @@ Important target-specific constraints:
 - The Intel backlight node is readable and writable by the current user at the filesystem permission layer, but nlevels=0 leaves the hardware range unspecified. The generic FreeBSD backlight layer does not establish a universal range. FCC remains read-only until the i915 LinuxKPI bridge and accepted value domain are traced.
 - All three target mixer DEVMASK values omit SOUND_MASK_MUTE. Although READ_MUTE returns zero, that raw result is not a valid mute-state indication when the capability bit is absent. FCC must report mute unsupported on these devices.
 - No write ioctl was issued. Filesystem write permission is not proof of successful or safe device control.
+
+
+## Explicit optional-control capability reporting
+
+The audio adapter preserves whether SOUND_MASK_MUTE is present in each mixer's SOUND_MIXER_READ_DEVMASK. A raw SOUND_MIXER_READ_MUTE result is not queried or interpreted as state when the capability bit is absent. The P0 window now reports mute as unsupported for devices that do not advertise it; it does not emulate mute by setting volume to zero.
