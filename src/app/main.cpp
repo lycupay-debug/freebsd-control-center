@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
             }));
         });
     QObject::connect(&volumeWatcher, &QFutureWatcher<fcc::platform::VolumeWriteResult>::finished,
-        &panel, [&panel, &volumeWatcher]() {
+        &panel, [&panel, &volumeWatcher, &refresh]() {
             const auto result = volumeWatcher.result();
             panel.setVolumeBusy(false);
             if (result.actual)
