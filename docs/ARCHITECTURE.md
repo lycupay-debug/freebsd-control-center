@@ -19,9 +19,10 @@ Separate presentation, application coordination, services, desktop integration a
 - `include/fcc/gui/control_center/control_panel.h`, `src/gui/control_center/control_panel.cpp`: transient Qt popup, screen-bounded positioning and request signals; no platform access.
 - `include/fcc/platform/probe_result.h`: shared probe records and diagnostics.
 - `include/fcc/platform/brightness_backend.h`, `src/platform/freebsd/brightness_backend.cpp`: read-only backlight discovery.
-- `include/fcc/platform/audio_backend.h`, `src/platform/freebsd/audio_backend.cpp`: read-only mixer/master-volume discovery.
+- `include/fcc/platform/audio_backend.h`, `src/platform/freebsd/audio_backend.cpp`: read-only mixer discovery and guarded explicit master-volume write/readback/restore.
 - `src/platform_probe/main.cpp`: command-line diagnostics.
-- `tests/unit/test_platform_values.cpp`: pure OSS volume decoder tests.
+- `tests/unit/test_platform_values.cpp`: OSS decode/encode, bounds, path rejection and mute-capability tests.
+- `tests/unit/test_control_panel.cpp`: popup geometry/Escape, mixer selection, stereo values and explicit-Apply signal tests.
 
 ## Dependency direction
 Presentation -> application/service contracts <- FreeBSD implementations. The P0 composition root temporarily invokes the probe interfaces directly; device calls remain outside widgets. Platform code never depends on Qt.
