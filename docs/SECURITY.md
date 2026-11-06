@@ -6,7 +6,7 @@ FCC runs as logged-in user. GUI must not run as root. UI controls are not an aut
 ## Device access
 P0 inspects sysctl/backlight/mixer/device-node permissions first. Record effective user, group, mode and access results. Do not change permissions or add groups as an unreviewed workaround.
 
-If privilege is proven necessary, pause and design a narrow helper: operation allowlist; strict argument/range validation; fixed device allowlist; no arbitrary command execution; authenticated local IPC and peer checks; bounded request size/time/rate; auditable outcomes; separate tests and uninstall plan. Whole GUI as root is unacceptable.
+If privilege is proven necessary, pause and design a narrow helper: operation allowlist; strict argument/range validation; fixed device allowlist; no arbitrary command execution; authenticated local IPC and peer checks; bounded request size/time/rate; auditable outcomes; separate tests and uninstall plan. Whole GUI as root is unacceptable. The current audio backend master-volume setter remains normal-user only and enforces a canonical `/dev/mixerN` path, DEVMASK capability, 0..100 bounds, original-value capture, readback and restoration attempt. The GUI does not expose it yet.
 
 ## Input/config/logs
 Treat UI values, device IDs, D-Bus messages and config as untrusted. Validate at service/backend boundary. Prefer native APIs over shell construction. Store preferences only, never credentials/tokens. Bound and rotate logs; never log secrets or unbounded device output.
