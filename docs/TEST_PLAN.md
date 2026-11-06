@@ -12,7 +12,7 @@ Record host, OS, package versions, command, exit code, output, date and limits. 
 | P0-05 | Brightness discovery | verified read-only: `/dev/backlight/backlight0`, `intel_backlight`, current 9; driver reports nlevels=0, so min/max unavailable |
 | P0-06 | Brightness write | not implemented or tested; no write ioctl in P0 adapter |
 | P0-07 | Mixer discovery | verified read-only: mixer0/1/2 and master volume values 60:60, 86:86, 100:100 |
-| P0-08 | Audio write/mute | not implemented or tested; no write ioctl in P0 adapter |
+| P0-08 | Audio write/mute | master-volume setter implemented and exercised on non-default mixer2: 100:100 -> 99:99 -> 100:100, both readbacks exact; default mixer0 remained 60:60; mute remains unsupported and unimplemented |
 | P0-09 | Theme | not implemented |
 | P0-10 | Rendering | earlier Intel GLX acceleration evidence exists; FCC-specific renderer selection remains unverified |
 | P0-11 | Failure | partial: invalid/absent endpoint paths retain explicit issues; permission-denied behavior not yet simulated |
@@ -20,10 +20,10 @@ Record host, OS, package versions, command, exit code, output, date and limits. 
 
 ## Automated tests
 
-- `fcc_platform_values`: pure OSS stereo-volume decoding; zero, 100 and out-of-range channels; mute capability-bit interpretation.
+- `fcc_platform_values`: pure OSS stereo-volume decoding/encoding; zero, 100 and out-of-range channels; invalid mixer path/range rejection; mute capability-bit interpretation.
 - `fcc_control_panel`: popup geometry clamping (including a non-zero monitor origin) and Escape dismissal.
 - Popup outside-click behavior is delegated to Qt's native popup/window-system behavior. The offscreen QPA plugin does not model outside-click routing; this check must run under the target X11 window manager.
-- Tests do not mutate host hardware.
+- Automated tests do not mutate host hardware. The separate one-time target experiment is recorded below and was explicitly restored.
 - `fcc-platform-probe` exercises actual read-only hardware discovery on the development laptop.
 
 ## P1
@@ -52,3 +52,11 @@ Repeat core operations; check GUI responsiveness, memory/fd growth and log bound
 - Added a pure unit test proving that mute is reported only when SOUND_MASK_MUTE is present in the advertised OSS device mask.
 - The test includes the observed target mask 0x01002831, which must remain unsupported for mute.
 - This tests capability interpretation only; it does not test or issue hardware mute writes.
+
+
+## Audio write/readback/restore experiment (2026-11-06)
+
+- Preconditions: `/dev/mixer2` was confirmed non-default and read 100:100; the default unit remained mixer0.
+- Action: set mixer2 to 99:99, read back 99:99, then restore 100:100 and read back 100:100.
+- Result: both operations returned success; a final independent read-only probe confirmed mixer2=100:100 and mixer0=60:60.
+- Scope: validates only this target's master-volume write path and exact restoration. It is not evidence for mute, other hardware, failure injection or UI controls.
