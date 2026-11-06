@@ -63,3 +63,12 @@ Important target-specific constraints:
 ## Explicit optional-control capability reporting
 
 The audio adapter preserves whether SOUND_MASK_MUTE is present in each mixer's SOUND_MIXER_READ_DEVMASK. A raw SOUND_MIXER_READ_MUTE result is not queried or interpreted as state when the capability bit is absent. The P0 window now reports mute as unsupported for devices that do not advertise it; it does not emulate mute by setting volume to zero.
+
+
+## Tray and popup UI (P0)
+
+- `ControlPanel` is a Qt `QFrame` with `Qt::Popup | Qt::FramelessWindowHint`; it has no dependency on platform device APIs.
+- Tray activation opens the panel. Its position is clamped to the active screen's available geometry and flips above the anchor when the anchor is in the lower half of the screen. If the tray does not expose geometry, the current pointer position is used.
+- Escape dismissal and pure geometry calculations are covered by the Qt test target. Outside-click dismissal is provided by Qt's popup behavior but must be checked under the live XFCE/X11 window manager; the offscreen test plugin cannot emulate this routing.
+- The notification-center window is currently a shell with an empty-state message, not a complete notification service.
+- Refresh is asynchronous and refuses to start a second probe while the first is running.
