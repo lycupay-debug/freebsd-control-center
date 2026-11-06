@@ -9,7 +9,7 @@ The current CMake install is a per-user development deployment. It does not inst
 - FreeBSD 15.1-RELEASE (initially validated on XFCE/Xorg).
 - Qt 6 Widgets and Concurrent development/runtime packages.
 - CMake 3.21 or newer and a C++20 compiler.
-- A normal desktop user with read access to the supported backlight/mixer devices. Current FCC behavior is read-only.
+- A normal desktop user with read access to the supported backlight/mixer devices. Brightness discovery is read-only; master-volume changes are issued only after explicit Apply in the UI.
 
 ## Build and install
 
