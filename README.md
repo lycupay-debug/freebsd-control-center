@@ -2,7 +2,7 @@
 
 Native FreeBSD desktop control center: compact system controls plus a separate notification center.
 
-**Status:** P0 platform validation. Read-only backlight/mixer discovery and a Qt tray-launched transient control panel are implemented. The panel supports Escape dismissal and screen-bounded placement; X11 outside-click behavior still requires desktop verification. Hardware writes, notifications beyond an empty center shell, theme persistence, GPU selection, autostart and packaging remain incomplete. Not production-ready.
+**Status:** P0 platform validation. Read-only backlight/mixer discovery, a Qt tray-launched transient control panel, and a guarded mixer master-volume write/readback/restore backend are implemented. The UI does not yet expose device write controls. Brightness writes, mute, full notifications, theme persistence, GPU selection, autostart and release packaging remain incomplete. Not production-ready.
 
 Baseline: FreeBSD 15.1-RELEASE, XFCE/Xorg, C++20, Qt 6 Widgets, CMake, MIT. Qt Widgets/QPainter Raster is initial baseline. Qt Quick deferred. NVIDIA only after repeatable stability tests; Intel next; CPU Raster fallback. No CUDA/NVDEC dependency or driver reconfiguration.
 
