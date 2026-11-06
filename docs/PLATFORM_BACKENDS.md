@@ -33,7 +33,7 @@ No `BACKLIGHTUPDATESTATUS` call exists in this P0 adapter. The app does not alte
 5. Reject channel values outside 0..100.
 6. Read the descriptive label from `dev.pcm.N.%desc` and compare the unit with `hw.snd.default_unit`.
 
-This first adapter intentionally reports master volume only. It does not claim mute-state support and exposes no write operation. Mute capability and semantics require separate verification before implementation.
+The discovery adapter reports master volume and whether mute is advertised. The backend also exposes a guarded master-volume setter: canonical mixer path validation, 0..100 validation, DEVMASK check, O_RDWR open, original-value capture, WRITE_VOLUME, exact readback verification, and best-effort original-value restoration if verification fails. The P0 UI still does not expose this setter. Mute remains unavailable when SOUND_MASK_MUTE is absent.
 
 ## Error model
 
@@ -72,3 +72,11 @@ The audio adapter preserves whether SOUND_MASK_MUTE is present in each mixer's S
 - Escape dismissal and pure geometry calculations are covered by the Qt test target. Outside-click dismissal is provided by Qt's popup behavior but must be checked under the live XFCE/X11 window manager; the offscreen test plugin cannot emulate this routing.
 - The notification-center window is currently a shell with an empty-state message, not a complete notification service.
 - Refresh is asynchronous and refuses to start a second probe while the first is running.
+
+
+## Master-volume write validation (2026-11-06)
+
+- The backend setter was exercised on the non-default `/dev/mixer2` endpoint only after confirming it was not the current default and its original master volume was 100:100.
+- A bounded temporary change 100:100 -> 99:99 returned success with exact 99:99 readback. A second operation restored 100:100 with exact readback. A fresh read-only discovery confirmed mixer2 remained 100:100 and default mixer0 remained 60:60.
+- This verifies the current device's master-volume write path and restoration path for this exact test. It does not verify all mixer models, partial failures, permission denial, device removal during write, or UI integration.
+- No mute ioctl was issued. No brightness write was issued.
