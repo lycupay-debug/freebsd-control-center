@@ -1,6 +1,6 @@
 # Architecture
 
-Status: P0 read-only FreeBSD platform adapters and an initial tray/popup UI implemented; service/API boundaries remain provisional.
+Status: P0 read-only backlight and mixer discovery plus a tray/popup with explicit master-volume control implemented; service/API boundaries remain provisional.
 
 ## Principles
 Separate presentation, application coordination, services, desktop integration and OS adapters. UI never accesses sysctl/device/mixer directly. Core does not depend on Qt Widgets. Hardware services do not depend on desktop environment. Blocking I/O stays off GUI thread. Missing devices are non-fatal. No silent fallback or false success. Avoid speculative abstractions.
@@ -27,10 +27,10 @@ Separate presentation, application coordination, services, desktop integration a
 Presentation -> application/service contracts <- FreeBSD implementations. The P0 composition root temporarily invokes the probe interfaces directly; device calls remain outside widgets. Platform code never depends on Qt.
 
 ## Data flow
-P0 composition root -> backend -> O_RDONLY device open + read ioctls -> result/diagnostics -> popup status label. Tray activation opens the popup; Qt::Popup supplies Escape and outside-click dismissal semantics. No brightness, volume or mute write path exists.
+P0 composition root -> backend -> read-only brightness/mixer discovery -> snapshot/diagnostics -> popup state. A user Apply request -> asynchronous composition-root task -> validated `/dev/mixerN` O_RDWR write -> readback/restoration result -> UI reconciliation. Widgets never open devices. Brightness remains read-only; mute writes are absent because target devices do not advertise mute.
 
 ## Threading/lifecycle
-GUI objects stay on GUI thread. Initial discovery uses QtConcurrent. No thread-per-event. Requests time out; stale completions cannot overwrite a newly selected device. Shutdown stops new work, cancels/waits bounded in-flight operations, then releases adapters.
+GUI objects stay on GUI thread. Discovery and explicit volume writes use QtConcurrent. The current composition root serializes refresh and volume writes by disabling controls and rejecting overlapping requests. The current implementation waits for in-flight futures at shutdown; bounded cancellation/timeouts and stale-result generation tokens remain unimplemented and are release blockers for a hardened service layer.
 
 ## Errors
 Distinguish Unsupported, Unavailable, PermissionDenied, InvalidValue, Busy, TimedOut, IoError, InternalError. Keep OS detail for diagnostics; user messages safe. Never replace failure with plausible default.
