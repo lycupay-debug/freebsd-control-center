@@ -100,3 +100,12 @@ Read-only checks executed on the target:
 - filesystem permission checks with test -r and test -w.
 
 No device write test was run. No write behavior is marked verified by this document.
+
+
+## 7. Follow-up implementation and reversible volume experiment (2026-11-06)
+
+After the read-only research above, FCC added a guarded master-volume write operation. It validates the mixer path and channel bounds, checks the advertised master-volume capability, captures the original value, performs `SOUND_MIXER_WRITE_VOLUME`, verifies `SOUND_MIXER_READ_VOLUME`, and attempts restoration on any failed verification.
+
+A separate temporary test program exercised the non-default `/dev/mixer2` endpoint only after confirming its original value was 100:100. It changed the value to 99:99 and read back 99:99, then restored 100:100 and read back 100:100. A final independent probe confirmed mixer2 remained 100:100 and default mixer0 remained 60:60. The temporary test source and executable were removed.
+
+This is a target-specific successful write/readback/restore result. It does not validate other mixers, injected write/readback failures, mute, or GUI integration. No brightness write was issued.
