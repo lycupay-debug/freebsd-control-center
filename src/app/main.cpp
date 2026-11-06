@@ -1,9 +1,9 @@
 /**
- * Responsibility: compose the tray application, transient control panel and probes.
- * Dependencies: Qt Widgets/Concurrent, FCC GUI surface and FreeBSD platform adapters.
- * Collaboration: owns service lifetime and routes panel requests to app actions.
- * Side effects: creates a tray/popup; performs read-only device discovery asynchronously.
- * Constraint: normal-user process; no hardware writes, shell commands or privilege escalation.
+ * Responsibility: compose the tray application, transient control panel and platform services.
+ * Dependencies: Qt Widgets/Concurrent and FreeBSD platform adapters.
+ * Collaboration: owns async probe/write lifetimes and routes explicit UI requests.
+ * Side effects: reads devices during refresh; writes master volume only after explicit Apply.
+ * Constraint: normal-user process; no shell commands or privilege escalation.
  */
 #include "fcc/gui/control_center/control_panel.h"
 #include "fcc/platform/audio_backend.h"
@@ -16,15 +16,29 @@
 #include <QGuiApplication>
 #include <QLabel>
 #include <QMenu>
+#include <QPainter>
+#include <QPixmap>
+#include <QPen>
+#include <QRectF>
+#include <QIcon>
 #include <QScreen>
 #include <QStyle>
 #include <QSystemTrayIcon>
 #include <QVBoxLayout>
 #include <QtConcurrent/QtConcurrentRun>
 #include <QStringList>
-
 namespace {
-QString probePlatform() {
+struct ProbeSnapshot {
+    QString status;
+    QStringList audioLabels;
+    QStringList audioPaths;
+    QList<int> audioLeftVolumes;
+    QList<int> audioRightVolumes;
+    QString defaultAudioPath;
+};
+ProbeSnapshot probePlatform()
+{
+    ProbeSnapshot snapshot;
     QStringList lines;
     const fcc::platform::BrightnessBackend brightness;
     const auto brightnessReport = brightness.discover();
@@ -37,33 +51,38 @@ QString probePlatform() {
                     ? QStringLiteral("%1..%2").arg(*device.minimum).arg(*device.maximum)
                     : QStringLiteral("not reported"));
         }
-    } else {
-        lines << QStringLiteral("Brightness: unavailable");
-    }
+    } else lines << QStringLiteral("Brightness: unavailable");
     for (const auto &issue : brightnessReport.issues)
         lines << QStringLiteral("Brightness diagnostic: %1").arg(QString::fromStdString(issue.detail));
-
     const fcc::platform::AudioBackend audio;
     const auto audioReport = audio.discover();
     if (audioReport.available()) {
         for (const auto &device : audioReport.devices) {
-            lines << QStringLiteral("Audio: %1%2, master L/R %3/%4")
+            const QString path = QString::fromStdString(device.path);
+            const QString label = QStringLiteral("%1%2 — %3/%4")
                 .arg(QString::fromStdString(device.name))
                 .arg(device.isDefault ? QStringLiteral(" [default]") : QString())
+                .arg(device.masterVolume.left).arg(device.masterVolume.right);
+            snapshot.audioPaths << path;
+            snapshot.audioLabels << label;
+            snapshot.audioLeftVolumes << device.masterVolume.left;
+            snapshot.audioRightVolumes << device.masterVolume.right;
+            if (device.isDefault || snapshot.defaultAudioPath.isEmpty())
+                snapshot.defaultAudioPath = path;
+            lines << QStringLiteral("Audio: %1, master L/R %2/%3")
+                .arg(QString::fromStdString(device.name))
                 .arg(device.masterVolume.left).arg(device.masterVolume.right);
             lines << QStringLiteral("Audio mute: %1")
                 .arg(device.muteSupported ? QStringLiteral("advertised by device")
                                           : QStringLiteral("unsupported by device"));
         }
-    } else {
-        lines << QStringLiteral("Audio: unavailable");
-    }
+    } else lines << QStringLiteral("Audio: unavailable");
     for (const auto &issue : audioReport.issues)
         lines << QStringLiteral("Audio diagnostic: %1").arg(QString::fromStdString(issue.detail));
-    return lines.join(QLatin1Char('\n'));
+    snapshot.status = lines.join(QLatin1Char('\n'));
+    return snapshot;
 }
 }
-
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
@@ -71,18 +90,45 @@ int main(int argc, char *argv[])
     QApplication::setApplicationVersion(QStringLiteral("0.1.0"));
     QApplication::setOrganizationName(QStringLiteral("FCC"));
     app.setQuitOnLastWindowClosed(false);
-
     fcc::gui::ControlPanel panel;
-    QFutureWatcher<QString> probeWatcher;
-    const auto refresh = [&panel, &probeWatcher]() {
-        if (probeWatcher.isRunning()) return;
-        panel.setStatusText(QStringLiteral("Reading hardware state (read-only)…"));
+    QFutureWatcher<ProbeSnapshot> probeWatcher;
+    QFutureWatcher<fcc::platform::VolumeWriteResult> volumeWatcher;
+    const auto refresh = [&panel, &probeWatcher, &volumeWatcher]() {
+        if (probeWatcher.isRunning() || volumeWatcher.isRunning()) return;
+        panel.setVolumeBusy(true);
+        panel.setStatusText(QStringLiteral("Reading system state (read-only)…"));
         probeWatcher.setFuture(QtConcurrent::run(&probePlatform));
     };
-    QObject::connect(&probeWatcher, &QFutureWatcher<QString>::finished, &panel,
-        [&panel, &probeWatcher]() { panel.setStatusText(probeWatcher.result()); });
+    QObject::connect(&probeWatcher, &QFutureWatcher<ProbeSnapshot>::finished, &panel,
+        [&panel, &probeWatcher]() {
+            const auto snapshot = probeWatcher.result();
+            panel.setStatusText(snapshot.status);
+            panel.setAudioDevices(snapshot.audioLabels, snapshot.audioPaths,
+                                  snapshot.audioLeftVolumes, snapshot.audioRightVolumes, snapshot.defaultAudioPath);
+            panel.setVolumeBusy(false);
+        });
     QObject::connect(&panel, &fcc::gui::ControlPanel::refreshRequested, &panel, refresh);
-
+    QObject::connect(&panel, &fcc::gui::ControlPanel::volumeApplyRequested, &panel,
+        [&panel, &probeWatcher, &volumeWatcher](const QString &path, int left, int right) {
+            if (probeWatcher.isRunning() || volumeWatcher.isRunning()) return;
+            panel.setVolumeBusy(true);
+            volumeWatcher.setFuture(QtConcurrent::run([path, left, right]() {
+                const fcc::platform::AudioBackend backend;
+                return backend.setMasterVolume(path.toStdString(), {left, right});
+            }));
+        });
+    QObject::connect(&volumeWatcher, &QFutureWatcher<fcc::platform::VolumeWriteResult>::finished,
+        &panel, [&panel, &volumeWatcher]() {
+            const auto result = volumeWatcher.result();
+            panel.setVolumeBusy(false);
+            if (result.actual)
+                panel.setAudioVolume(result.actual->left, result.actual->right);
+            else
+                panel.restoreAudioVolume();
+            panel.appendStatusLine(QStringLiteral("Audio volume: %1")
+                .arg(QString::fromStdString(result.detail)));
+            if (!result.actual) refresh();
+        });
     QDialog notificationCenter;
     notificationCenter.setWindowTitle(QStringLiteral("Notification Center"));
     notificationCenter.resize(360, 220);
@@ -95,9 +141,21 @@ int main(int argc, char *argv[])
         notificationCenter.show(); notificationCenter.raise(); notificationCenter.activateWindow();
     });
     QObject::connect(&panel, &fcc::gui::ControlPanel::quitRequested, &app, &QApplication::quit);
-
+    QPixmap trayPixmap(22, 22);
+    trayPixmap.fill(Qt::transparent);
+    {
+        QPainter painter(&trayPixmap);
+        painter.setRenderHint(QPainter::Antialiasing);
+        QPen pen(app.palette().color(QPalette::WindowText));
+        pen.setWidthF(1.7);
+        painter.setPen(pen);
+        painter.drawRoundedRect(QRectF(3.0, 3.0, 16.0, 16.0), 3.0, 3.0);
+        painter.drawLine(QPointF(7.0, 8.0), QPointF(15.0, 8.0));
+        painter.drawLine(QPointF(7.0, 12.0), QPointF(15.0, 12.0));
+        painter.drawLine(QPointF(7.0, 16.0), QPointF(12.0, 16.0));
+    }
     QSystemTrayIcon tray;
-    tray.setIcon(app.style()->standardIcon(QStyle::SP_ComputerIcon));
+    tray.setIcon(QIcon(trayPixmap));
     tray.setToolTip(QStringLiteral("FreeBSD Control Center"));
     QMenu trayMenu;
     QAction *showAction = trayMenu.addAction(QStringLiteral("Open Control Center"));
@@ -105,7 +163,6 @@ int main(int argc, char *argv[])
     trayMenu.addSeparator();
     QAction *quitAction = trayMenu.addAction(QStringLiteral("Quit"));
     tray.setContextMenu(&trayMenu);
-
     const auto openPanel = [&tray, &panel]() {
         const QRect trayGeometry = tray.geometry();
         const QPoint anchor = trayGeometry.isValid() && !trayGeometry.isEmpty()
@@ -124,7 +181,10 @@ int main(int argc, char *argv[])
             if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick)
                 openPanel();
         });
-
+    QObject::connect(&app, &QCoreApplication::aboutToQuit, &app, [&]() {
+        if (probeWatcher.isRunning()) probeWatcher.waitForFinished();
+        if (volumeWatcher.isRunning()) volumeWatcher.waitForFinished();
+    });
     tray.show();
     refresh();
     if (QSystemTrayIcon::isSystemTrayAvailable()) openPanel();
