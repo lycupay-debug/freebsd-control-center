@@ -21,3 +21,8 @@ Modes system/light/dark. System source may be unavailable; expose source/status 
 Tray adapter detects capability and handles activation/menu/absence. Popup adapter handles focus/dismissal/screen/edge. Session adapter manages reversible user autostart.
 
 Freeze interfaces only after P0 evidence. Update callers, tests, docs and migration notes together.
+
+
+## Control panel UI contract (P0)
+
+`fcc::gui::ControlPanel` accepts status text and emits `refreshRequested`, `notificationCenterRequested`, and `quitRequested`. It does not own platform backends or issue system calls. The application composition root owns refresh scheduling and window lifecycle. The popup's `popupPosition` helper clamps placement to a supplied screen available-geometry rectangle.
