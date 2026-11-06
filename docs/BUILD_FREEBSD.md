@@ -15,7 +15,7 @@ Clang/C++20, CMake >=3.21, Qt 6 Widgets (API baseline >=6.4). Optional: Ninja, c
 Run inside active Xorg/XFCE session. SSH without DISPLAY cannot verify GUI behavior. Never run FCC as root.
 
 ## Installation
-No system-wide install or autostart during P0. Validate from build tree. Later use explicit package/install manifest and uninstall procedure. Autostart opt-in and reversible.
+Per-user install is verified under ~/.local using the CMake install manifest and docs/INSTALL_FREEBSD.md. The installed tray UI supports explicit, readback-verified master-volume writes; brightness remains read-only. No system-wide package or autostart is enabled. Autostart remains opt-in and reversible; pkg(8) packaging/release is pending.
 
 ## Diagnostics
 Record OS/kernel/arch; Qt/CMake/compiler and package origins; DISPLAY/window manager/compositor; tray capability; brightness endpoints/permissions; mixer devices/controls; OpenGL renderer/context separately from Widgets raster; exact commands/conditions.
